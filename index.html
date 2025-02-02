@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add Money by Rounding</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 10px;
+      background-color: #f9f9f9;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    #question {
+      font-size: 22px;
+      margin: 20px;
+    }
+    .choices {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .choice {
+      padding: 10px 20px;
+      border: 2px solid #333;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 18px;
+      background-color: #fff;
+      transition: background-color 0.3s;
+    }
+    .choice:hover {
+      background-color: #e0e0e0;
+    }
+    .correct {
+      background-color: lightgreen !important;
+    }
+    .incorrect {
+      background-color: lightcoral !important;
+    }
+    #feedback {
+      font-size: 20px;
+      margin: 20px;
+    }
+    #starCounter {
+      display: inline-block;
+      margin-right: 20px;
+    }
+    #message {
+      display: inline-block;
+      height: 24px;
+    }
+    /* Visual container for the rounding process */
+    .visual {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+    }
+    .moneyBox {
+      border: 2px solid #333;
+      padding: 10px;
+      border-radius: 8px;
+      background-color: #fff;
+      width: 200px;
+    }
+    .moneyBox p {
+      margin: 8px 0;
+      font-size: 16px;
+    }
+    .moneyBox span {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Add Money by Rounding</h1>
+  <div id="question"></div>
+  <div class="visual" id="visual"></div>
+  <div class="choices" id="choices"></div>
+  <div id="feedback">
+    <span id="starCounter">⭐ 0</span>
+    <span id="message"></span>
+  </div>
+  
+  <script>
+    var starCount = 0;
+
+    // Helper function to update the star counter display.
+    function updateStarCounter() {
+      document.getElementById("starCounter").innerHTML = "⭐ " + starCount;
+    }
+
+    // Formats a number as money (two decimals).
+    function formatMoney(num) {
+      return "$" + num.toFixed(2);
+    }
+
+    // Generates two money amounts that are almost whole dollars.
+    // Each amount is of the form (dollar + 0.90) or (dollar + 0.95)
+    function generateMoneyAmounts() {
+      var dollar1 = Math.floor(Math.random() * 9) + 1;
+      var dollar2 = Math.floor(Math.random() * 9) + 1;
+      var centsOptions = [0.90, 0.95];
+      var cents1 = centsOptions[Math.floor(Math.random() * centsOptions.length)];
+      var cents2 = centsOptions[Math.floor(Math.random() * centsOptions.length)];
+      var amount1 = dollar1 + cents1;
+      var amount2 = dollar2 + cents2;
+      return {amount1: amount1, amount2: amount2, 
+              round1: dollar1 + 1, round2: dollar2 + 1, 
+              corr1: (cents1 === 0.90 ? 0.10 : 0.05),
+              corr2: (cents2 === 0.90 ? 0.10 : 0.05)};
+    }
+
+    // Generates a question for the game.
+    function generateQuestion() {
+      document.getElementById("message").innerHTML = "";
+      
+      var moneyData = generateMoneyAmounts();
+      var a1 = moneyData.amount1;
+      var a2 = moneyData.amount2;
+      var round1 = moneyData.round1;
+      var round2 = moneyData.round2;
+      var corr1 = moneyData.corr1;
+      var corr2 = moneyData.corr2;
+      
+      // Using the rounding trick:
+      // Sum = (rounded1 + rounded2) - (correction1 + correction2)
+      var sumRounded = round1 + round2;
+      var totalCorr = corr1 + corr2;
+      var correctAnswer = sumRounded - totalCorr;
+      
+      // Display the question text.
+      document.getElementById("question").innerHTML = 
+        "Calculate: " + formatMoney(a1) + " + " + formatMoney(a2) + "<br>" +
+        "Hint: Round each up to the next whole number then subtract the extra cents.";
+      
+      generateVisual(a1, round1, corr1, a2, round2, corr2);
+      
+      // Create choices: include the correct answer and three near misses.
+      var choices = [];
+      choices.push(correctAnswer);
+      while (choices.length < 4) {
+        var offset = (Math.floor(Math.random() * 3) - 1) * 0.05; // -0.05, 0, or 0.05
+        var wrong = parseFloat((correctAnswer + offset).toFixed(2));
+        if (wrong > 0 && choices.indexOf(wrong) === -1) {
+          choices.push(wrong);
+        }
+      }
+      
+      shuffleArray(choices);
+      
+      var choicesDiv = document.getElementById("choices");
+      choicesDiv.innerHTML = "";
+      
+      for (var i = 0; i < choices.length; i++) {
+        var choice = choices[i];
+        var btn = document.createElement("div");
+        btn.className = "choice";
+        btn.innerHTML = formatMoney(choice);
+        btn.onclick = (function(selected, correct) {
+          return function() {
+            if (Math.abs(selected - correct) < 0.001) {
+              this.classList.add("correct");
+              document.getElementById("message").innerHTML = "Correct! 🎉";
+              starCount++;
+              updateStarCounter();
+              setTimeout(generateQuestion, 1000);
+            } else {
+              this.classList.add("incorrect");
+              document.getElementById("message").innerHTML = "Incorrect! ❌";
+              starCount--;
+              updateStarCounter();
+            }
+          };
+        })(choice, correctAnswer);
+        choicesDiv.appendChild(btn);
+      }
+    }
+
+    // Creates a visual breakdown of the two money amounts.
+    // For each amount, shows the original value, the rounded-up value, and the correction amount.
+    function generateVisual(a1, round1, corr1, a2, round2, corr2) {
+      var visualDiv = document.getElementById("visual");
+      visualDiv.innerHTML = "";
+      
+      // Create box for first money amount.
+      var box1 = document.createElement("div");
+      box1.className = "moneyBox";
+      box1.innerHTML = "<p>Original: <span>" + formatMoney(a1) + "</span></p>" +
+                       "<p>Rounded: <span>" + round1 + "</span></p>" +
+                       "<p>Subtract: <span>" + formatMoney(corr1) + "</span></p>";
+      
+      // Create box for second money amount.
+      var box2 = document.createElement("div");
+      box2.className = "moneyBox";
+      box2.innerHTML = "<p>Original: <span>" + formatMoney(a2) + "</span></p>" +
+                       "<p>Rounded: <span>" + round2 + "</span></p>" +
+                       "<p>Subtract: <span>" + formatMoney(corr2) + "</span></p>";
+      
+      visualDiv.appendChild(box1);
+      visualDiv.appendChild(box2);
+    }
+    
+    // Helper function to shuffle an array.
+    function shuffleArray(array) {
+      for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+      }
+    }
+    
+    window.onload = function() {
+      updateStarCounter();
+      generateQuestion();
+    };
+  </script>
+</body>
+</html>
