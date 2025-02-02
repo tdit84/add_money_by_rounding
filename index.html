@@ -147,7 +147,8 @@
       var choices = [];
       choices.push(correctAnswer);
       while (choices.length < 4) {
-        var offset = (Math.floor(Math.random() * 3) - 1) * 0.05; // -0.05, 0, or 0.05
+        var offset = (Math.floor(Math.random() * 5) - 2) * 0.05; // possible values: -0.1, -0.05, 0, 0.05, 0.1
+        if (offset === 0) continue; // skip 0 so we don't duplicate the correct answer
         var wrong = parseFloat((correctAnswer + offset).toFixed(2));
         if (wrong > 0 && choices.indexOf(wrong) === -1) {
           choices.push(wrong);
